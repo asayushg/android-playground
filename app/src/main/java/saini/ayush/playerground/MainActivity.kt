@@ -1,13 +1,15 @@
 package saini.ayush.playerground
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import saini.ayush.playerground.media_store.GalleryActivity
-import saini.ayush.playerground.animations.EmotionalFaceView.Companion.HAPPY
-import saini.ayush.playerground.animations.EmotionalFaceView.Companion.SAD
+
+const val IMAGE_MIME_TYPE = "image/*"
+const val IMAGE_PICKER_REQUEST_CODE = 1
 
 class MainActivity : AppCompatActivity() {
 
@@ -17,10 +19,35 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        startActivity(Intent(this, GalleryActivity::class.java))
+        openGallery.setOnClickListener { startActivity(Intent(this, GalleryActivity::class.java)) }
+        selectImage.setOnClickListener {
+            selectImage()
+        }
 
         Log.d(TAG, "onCreate")
 
+    }
+
+
+    private fun selectImage() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = IMAGE_MIME_TYPE
+        }
+
+        startActivityForResult(intent, IMAGE_PICKER_REQUEST_CODE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
+        super.onActivityResult(requestCode, resultCode, resultData)
+
+        if (requestCode == IMAGE_PICKER_REQUEST_CODE && resultCode == RESULT_OK) {
+            resultData?.data?.let { uri ->
+                preview.setImageBitmap(
+                    BitmapFactory.decodeStream(contentResolver.openInputStream(uri))
+                )
+
+            }
+        }
     }
 
     override fun onResume() {
