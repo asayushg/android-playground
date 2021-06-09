@@ -35,6 +35,8 @@ class GalleryActivity : AppCompatActivity() {
 
         initGallery()
 
+        viewModel.saveImage()
+
 
     }
 

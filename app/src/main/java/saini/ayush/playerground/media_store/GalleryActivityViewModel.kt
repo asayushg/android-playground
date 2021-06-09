@@ -5,17 +5,27 @@ import android.app.Application
 import android.app.RecoverableSecurityException
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.content.ContentValues
 import android.content.IntentSender
 import android.database.ContentObserver
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.provider.MediaStore
 import android.util.Log
 import androidx.lifecycle.*
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -153,7 +163,7 @@ class GalleryActivityViewModel(application: Application) : AndroidViewModel(appl
                     images += image
 
                     // For debugging, we'll output the image objects we create to logcat.
-                    Log.v(TAG, "Added image: $image")
+                    //   Log.v(TAG, "Added image: $image")
                 }
             }
         }
@@ -249,6 +259,60 @@ class GalleryActivityViewModel(application: Application) : AndroidViewModel(appl
         }
     }
 
+
+    /**
+     * Save New Image Operations
+     */
+
+
+    fun saveImage() {
+        val imagePath = "https://jpeg.org/images/jpegsystems-home.jpg"
+        Log.d(TAG, "image: $imagePath")
+        Glide.with(getApplication<Application>().applicationContext)
+            .asBitmap()
+            .load(imagePath)
+            .into(object : CustomTarget<Bitmap>() {
+                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                    Log.d(TAG, "image: $resource")
+                    //  viewModelScope.launch {
+                    saveImageToStorage(resource)
+                    //}
+                }
+
+                override fun onLoadCleared(placeholder: Drawable?) {
+                    Log.d(TAG, "image: cleared")
+                }
+            })
+    }
+
+    fun saveImageToStorage(
+        bitmap: Bitmap,
+        filename: String = "screenshot.jpg",
+        mimeType: String = "image/jpeg",
+        subfolder: String = "testImages",
+        directory: String = Environment.DIRECTORY_PICTURES + "/" + subfolder,
+        mediaContentUri: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+    ) {
+        val imageOutStream: OutputStream
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+                put(MediaStore.Images.Media.RELATIVE_PATH, directory)
+            }
+
+            getApplication<Application>().contentResolver.run {
+                val uri = insert(mediaContentUri, values) ?: return
+                imageOutStream = openOutputStream(uri) ?: return
+            }
+        } else {
+            val imagePath = Environment.getExternalStoragePublicDirectory(directory).absolutePath
+            val image = File(imagePath, filename)
+            imageOutStream = FileOutputStream(image)
+        }
+
+        imageOutStream.use { bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it) }
+    }
 
 
 }
